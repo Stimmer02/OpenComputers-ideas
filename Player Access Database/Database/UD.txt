@@ -1,0 +1,4 @@
+2
+{}
+{access={nuclearDetonation=true,a2=true},passwd="simplePassword",name="stimmer02"}
+{access={a1=true},passwd="anyPassword",name="theUsortedGuy"}

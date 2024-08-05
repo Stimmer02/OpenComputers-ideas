@@ -1,0 +1,2 @@
+door=0f12a5b8-7434-4ecb-8c6c-6f2dca60ffcf
+detonator=1d374b10-d2c4-4f97-919d-2c25d5132470
