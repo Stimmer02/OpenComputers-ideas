@@ -5,6 +5,12 @@ Programs are mostly inspired by HBM's Nuclear Tech mod. The second I read that t
 
 This repo contains some of my creations. They are mostly dependent on each other so on their own they won't work. Most of them use Connection or SecureConnection class to communicate with other devices via "tunnel relay" creating network of star topology.
 
+Links to mods I am using:
+  - [OpenComputers](https://www.curseforge.com/minecraft/mc-mods/opencomputers)
+  - [Hbm's Nuclear Tech - Extended Edition](https://www.curseforge.com/minecraft/mc-mods/hbms-nuclear-tech-mod-extended-edition)
+  - [Computronics](https://wiki.vexatos.com/wiki:computronics)
+
+
 Just show how much fun there could while playing with those two mods connected by some scripts:
 ![total_co-miner](images/total_co-miner.png)
 ![Remote Rocket Silo](images/Remote%20Rocket%20Silo.png)
