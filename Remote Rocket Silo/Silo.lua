@@ -38,6 +38,7 @@ function Silo.new(launchpadAddr, loaderAddr, hatchAddr, launchpadPositionX, laun
     self.chathOperationTime = 4
     self.launchTime = 5
     self.chathOperatingThread = nil
+    self.inUse = false
     self:closeHatch()
 
     if launchpadPositionX == nil or launchpadPositionZ == nil then
@@ -133,14 +134,17 @@ function Silo:checkDistance(x, z)
 end
 
 function Silo:safeLaunch(x, z, missileName)
+    self.inUse = true
     local success, error
     success, error = self:setTarget(x, z)
     if not success then
+        self.inUse = false
         return false, error
     end
 
     success, error = self:load(missileName)
     if not success then
+        self.inUse = false
         return false, error
     end
 
@@ -155,6 +159,7 @@ function Silo:safeLaunch(x, z, missileName)
         self:closeHatchAfter(self.chathOperationTime)
     end
     self:load(missileName)
+    self.inUse = false
     return true
 end
 

@@ -7,7 +7,9 @@ SiloArray.__index = SiloArray
 
 function SiloArray.new(databaseFile)
     local self = setmetatable({}, SiloArray)
+    local startTime = os.time()
     self.silos = Silo.loadFromDatabase(databaseFile)
+    self.storageScanningTime = os.time() - startTime
     return self
 end
 
@@ -45,17 +47,29 @@ end
 --     return siloWithMostMissiles
 -- end
 
-function SiloArray:sortSilosByMissileCount(missileName, reverse)
+function SiloArray:sortSilosByMissileCount(missileName, reverse, onlyIdle)
+    reverse = reverse or false
+    onlyIdle = onlyIdle or false
     local siloArray = {}
     local totalCount = 0
-    for ID, silo in pairs(self.silos) do
-        local missileCount = silo.magazine:getMissiles()[missileName]
-        if missileCount ~= nil then
-            table.insert(siloArray, {ID = ID, count = missileCount})
-            totalCount = totalCount + missileCount
+    if onlyIdle then
+        for ID, silo in pairs(self.silos) do
+            local missileCount = silo.magazine:getMissiles()[missileName]
+            if missileCount ~= nil and silo.inUse == false then
+                table.insert(siloArray, {ID = ID, count = missileCount})
+                totalCount = totalCount + missileCount
+            end
+        end
+    else
+        for ID, silo in pairs(self.silos) do
+            local missileCount = silo.magazine:getMissiles()[missileName]
+            if missileCount ~= nil then
+                table.insert(siloArray, {ID = ID, count = missileCount})
+                totalCount = totalCount + missileCount
+            end
         end
     end
-    if reverse == nil then
+    if reverse == false then
         table.sort(siloArray, function(a, b)
             return a.count > b.count
         end)
@@ -64,15 +78,17 @@ function SiloArray:sortSilosByMissileCount(missileName, reverse)
             return a.count < b.count
         end)
     end
+    
 
     return siloArray, totalCount
 end
 
 
 function SiloArray:launchSingleMissile(missileName, x, z)
-    local silosID, totalCount = self:sortSilosByMissileCount(missileName)
+    local silosID, totalCount = self:sortSilosByMissileCount(missileName, false, true)
+
     if totalCount == 0 then
-        return false, "No missile found"
+        return false, "No missile found or all silos are busy"
     end
     local silo = self.silos[silosID[1].ID]
     local success, error = silo:safeLaunch(x, z, missileName)
@@ -281,6 +297,10 @@ function SiloArray:launchSalvo_rectangle(missileName, centerX, centerZ, sideX, s
     end
     
     return self:launchSalvo(missileName, centerX, centerZ, sideX * sideZ, spreadFunction)
+end
+
+function SiloArray:launchSalvo_square(missileName, centerX, centerZ, count, spacing)
+    return self:launchSalvo_rectangle(missileName, centerX, centerZ, count, count, spacing)
 end
 
 return SiloArray

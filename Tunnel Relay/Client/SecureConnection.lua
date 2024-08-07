@@ -2,6 +2,7 @@ local Connection = require("Connection")
 local AccessDatabase = require("AccessDatabase")
 
 local event = require("event")
+local thread = require("thread")
 
 -- Uses a database of authorized connection IDs
 -- has indexed whitelist of operations that won't be rejected (filter)
@@ -55,14 +56,30 @@ function SecureConnection:getMessageFrom(timeout, originID, messageHeader)
     return createPacket(fullEvent)
 end
 
-function SecureConnection:handleMessage(timeout, headerToActionMap)
+function SecureConnection:handleMessage(timeout, headerToActionMap, ...)
     local fullEvent = {event.pullFiltered(timeout, function(eventType, _, _, _, _, remoteID, header)
         return (eventType == "modem_message" and self.database:isPresent(remoteID) and headerToActionMap[header] ~= nil) or eventType == "interrupted"
     end)}
     if fullEvent[1] == "interrupted" or fullEvent[1] == nil then
-        return
+        return false
     end
-    headerToActionMap[fullEvent[7]](createPacket(fullEvent))
+    headerToActionMap[fullEvent[7]](..., createPacket(fullEvent))
+    return true
+end
+
+function SecureConnection:handleMessageMultiThreaded(timeout, headerToActionMap, ...)
+    local fullEvent = {event.pullFiltered(timeout, function(eventType, _, _, _, _, remoteID, header)
+        return (eventType == "modem_message" and self.database:isPresent(remoteID) and headerToActionMap[header] ~= nil) or eventType == "interrupted"
+    end)}
+    if fullEvent[1] == "interrupted" or fullEvent[1] == nil then
+        return false
+    end
+    thread.create(
+        function(...)
+            headerToActionMap[fullEvent[7]](..., createPacket(fullEvent))
+        end
+    )
+    return true
 end
 
 function SecureConnection:waitForMessageAndHandleDatabaseQuerries()
