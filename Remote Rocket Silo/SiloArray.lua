@@ -1,15 +1,16 @@
 local Silo = require("Silo")
 
 local thread = require("thread")
+local computer = require("computer")
 
 local SiloArray = {}
 SiloArray.__index = SiloArray
 
 function SiloArray.new(databaseFile)
     local self = setmetatable({}, SiloArray)
-    local startTime = os.time()
+    local startTime = computer.uptime()
     self.silos = Silo.loadFromDatabase(databaseFile)
-    self.storageScanningTime = os.time() - startTime
+    self.storageScanningTime = computer.uptime() - startTime
     return self
 end
 
@@ -17,6 +18,15 @@ function SiloArray:scanStorage()
     for _, silo in pairs(self.silos) do
         silo.magazine:checkIfLoaded()
         silo.magazine:scanStorage()
+    end
+end
+
+function SiloArray:printStorage()
+    print("Missiles in storage:")
+    local missiles = self:getMissiles()
+    table.sort(missiles)
+    for missileName, count in pairs(missiles) do
+        print(missileName .. ":", count)
     end
 end
 

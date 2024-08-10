@@ -34,7 +34,7 @@ function Silo.new(launchpadAddr, loaderAddr, hatchAddr, launchpadPositionX, laun
     self.magazine = SiloMagazine.new(self.loader)
     self.target = {x = 0, z = 0}
     self.hatchOpen = nil
-    self.minimumDistance = 100
+    self.minimumDistance = 120
     self.chathOperationTime = 4
     self.launchTime = 5
     self.chathOperatingThread = nil
@@ -261,6 +261,7 @@ function Silo.appendSiloDatabase(filename, launchpadPositionX, launchpadPosition
 end
 
 function Silo.loadFromDatabase(filename)
+    -- index lauchpadPositionX launchpadPositionZ launchpadAddr loaderAddr hatchAddr
     local file = io.open(filename, "r")
     if file == nil then
         error("Silo.createFromDatabase: Failed to open file ".. filename .." to read")
@@ -269,12 +270,14 @@ function Silo.loadFromDatabase(filename)
     local siloArray = {}
     for line in file:lines() do
         local values = {}
-        for value in line:gmatch("%S+") do
-            table.insert(values, value)
-        end
-        if #values >= 6 then
-            local silo = Silo.new(values[4], values[5], values[6], tonumber(values[2]), tonumber(values[3]))
-            siloArray[tonumber(values[1])] = silo
+        if string.sub(line, 1, 1) ~= "#" then
+            for value in line:gmatch("%S+") do
+                table.insert(values, value)
+            end
+            if #values >= 6 then
+                local silo = Silo.new(values[4], values[5], values[6], tonumber(values[2]), tonumber(values[3]))
+                siloArray[tonumber(values[1])] = silo
+            end
         end
     end
     file:close()

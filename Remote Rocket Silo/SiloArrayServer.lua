@@ -1,6 +1,7 @@
 local SiloArray = require("SiloArray")
-local SecureConnection = require("SecureConnection")
+
 local serialization = require("serialization")
+local computer = require("computer")
 
 local SiloArrayServer = {}
 SiloArrayServer.__index = SiloArrayServer
@@ -22,7 +23,8 @@ function SiloArrayServer.new(siloArray, secureConnection)
         ["MA-getSalvoTypes"] = self.getSalvoTypes,
         ["MA-launchMissile"] = self.launchMissile,
         ["MA-launchSalvo"] = self.launchSalvo,
-        ["MA-scanStorage"] = self.scanStorage
+        ["MA-scanStorage"] = self.scanStorage,
+        ["MA-getScanStorageTime"] = self.getScanStorageTime
     }
     self.running = false
     self.operatingOnSilos = false
@@ -37,6 +39,19 @@ function SiloArrayServer:registerDefaultSalvoFunctions()
     self:registerSalvoFunction("random", SiloArray.launchSalvo_random)
     self:registerSalvoFunction("circle", SiloArray.launchSalvo_circle)
     self:registerSalvoFunction("square", SiloArray.launchSalvo_square)
+end
+
+function SiloArrayServer:printSalvoFunctions()
+    print("Salvo functions:")
+    for k, _ in pairs(self.salvoFunctions) do
+        print(k)
+    end
+end
+
+function SiloArrayServer:printGreetings()
+    print("storageScanningTime: " .. self.siloArray.storageScanningTime)
+    self.siloArray:printStorage()
+    self:printSalvoFunctions()
 end
 
 function SiloArrayServer:getMissileTable(message)
@@ -77,8 +92,12 @@ function SiloArrayServer:launchSalvo(message)
     -- message.data[3] = salvo type
     -- message.data[4] = count
     -- message.data[5] = radius/separation
+    local unpacked = serialization.unserialize(message.data[3])
+    message.data[3] = unpacked[1]
+    message.data[4] = unpacked[2]
+    message.data[5] = unpacked[3]
     if self.operationOnSilos then
-        self.connection:send(message.originID, "MA-done", false, "Already operating on silos")
+        self.connection:send(message.originID, "MA-done", false, "Silos are currently busy")
         return
     end
     self.operationOnSilos = true
@@ -97,7 +116,11 @@ function SiloArrayServer:launchSalvo(message)
         return
     end
 
-    local successCount, errorArr = self.salvoFunctions[message.data[3]](message.data[2], coordinates.x, coordinates.z, message.data[4], message.data[5])
+    self.connection:send(message.originID, "MA-salvoTime", message.data[4]*3/5+10)
+
+    local start = computer.uptime()
+    local successCount, errorArr = self.salvoFunctions[message.data[3]](self.siloArray, message.data[2], coordinates.x, coordinates.z, message.data[4], message.data[5])
+    print("Salvo took " .. computer.uptime() - start .. " seconds")
 
     if successCount == 0 then
         print("Failed to launch salvo:")
@@ -119,16 +142,20 @@ function SiloArrayServer:launchSalvo(message)
 end
 
 function SiloArrayServer:scanStorage(message)
-    self.connection:send(message.originID, "MA-scanTime", self.siloArray.storageScanningTime)
     self.siloArray:scanStorage()
     self.connection:send(message.originID, "MA-done", true)
+end
+
+function SiloArrayServer:getScanStorageTime(message)
+    self.connection:send(message.originID, "MA-scanTime", self.siloArray.storageScanningTime)
 end
 
 function SiloArrayServer:run()
     self.running = true
     while self.running do
-        self.running = self.connection:handleMessageThreaded(self.operationMap, self)
+        self.running = self.connection:handleMessage(nil, self.operationMap, self)
     end
 end
 
 
+return SiloArrayServer
