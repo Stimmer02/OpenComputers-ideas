@@ -22,11 +22,15 @@ end
 function LauncherProgram:initStateFunctional()
     local serialization = require("serialization")
 
+    self.functions.getSiloID = (function ()
+        return 1
+    end)
+
     self.functions.requestLaunch = (function (connectionID, targetX, targetZ, missileName)
-        self.resources.connection:send(connectionID, "launch", serialization.serialize({x = targetX, z = targetZ}), missileName)
-        local response = self.resources.connection:getMessageFrom(5, connectionID, "launch")
+        self.resources.connection:send(connectionID, "MA-launchMissile", serialization.serialize({x = targetX, z = targetZ}), missileName)
+        local response = self.resources.connection:getMessageFrom(5, connectionID, "MA-done")
         if response ~= nil then
-            if response.data[1] == "confirmed" then
+            if response.data[1] then
                 return true
             else
                 return false, serialization.unserialize(response.data[2])
@@ -37,10 +41,58 @@ function LauncherProgram:initStateFunctional()
     end)
 
     self.functions.getMissiles = (function (connectionID)
-        self.resources.connection:send(connectionID, "getMissiles")
-        local response = self.resources.connection:getMessageFrom(5, connectionID, "missiles")
+        self.resources.connection:send(connectionID, "MA-getMissileTable")
+        local response = self.resources.connection:getMessageFrom(5, connectionID, "MA-getResponse")
         if response ~= nil then
             return true, serialization.unserialize(response.data[1])
+        else
+            return false, "No response from server"
+        end
+    end)
+
+    self.functions.getScanStorageTime = (function (connectionID)
+        self.resources.connection:send(connectionID, "MA-getScanStorageTime")
+        local response = self.resources.connection:getMessageFrom(5, connectionID, "MA-scanTime")
+        if response ~= nil then
+            return true, response.data[1]
+        else
+            return false, "No response from server"
+        end
+    end)
+
+    self.functions.scanStorage = (function (connectionID, scanTime)
+        self.resources.connection:send(connectionID, "MA-scanStorage")
+        local response = self.resources.connection:getMessageFrom(scanTime, connectionID, "MA-done")
+        if response ~= nil and response.data[1] then
+            return true
+        else
+            return false, "No response from server"
+        end
+    end)
+
+    self.functions.getSalvoTypes = (function (connectionID)
+        self.resources.connection:send(connectionID, "MA-getSalvoTypes")
+        local response = self.resources.connection:getMessageFrom(5, connectionID, "MA-getResponse")
+        if response ~= nil then
+            return true, serialization.unserialize(response.data[1])
+        else
+            return false, "No response from server"
+        end
+    end)
+
+    self.functions.requestSalvo = (function (connectionID, targetX, targetZ, missileType, salvoType, count, radiusOrSeparation)
+        self.resources.connection:send(connectionID, "MA-launchSalvo", serialization.serialize({x = targetX, z = targetZ}), missileType, serialization.serialize({salvoType, count, radiusOrSeparation}))
+        local response = self.resources.connection:getMessageFrom(5, connectionID, "MA-salvoTime")
+        if response == nil then
+            return false, "No response from server"
+        end
+        response = self.resources.connection:getMessageFrom(response.data[1], connectionID, "MA-done")
+        if response ~= nil then
+            if response.data[1] then
+                return true
+            else
+                return false, serialization.unserialize(response.data[2])
+            end
         else
             return false, "No response from server"
         end
@@ -93,10 +145,12 @@ function LauncherProgram:initStateInterface()
 
     self.elements.getPositionButton = DisplayElement.new()
     self.elements.getMissilesButton = DisplayElement.new()
+    self.elements.scanStorageButton = DisplayElement.new()
     self.elements.launchButton = DisplayElement.new()
     self.elements.exitButton = DisplayElement.new()
     self.groups.buttons:addElement(self.elements.getPositionButton)
     self.groups.buttons:addElement(self.elements.getMissilesButton)
+    self.groups.buttons:addElement(self.elements.scanStorageButton)
     self.groups.buttons:addElement(self.elements.launchButton)
     self.groups.buttons:addElement(self.elements.exitButton)
 
@@ -179,22 +233,29 @@ function LauncherProgram:initStateInitialized()
 
     self.elements.getPositionButton:setPosition(2, 1)
     self.elements.getPositionButton:setWidth(17)
-    self.elements.getPositionButton:setHeight(3)
+    self.elements.getPositionButton:setHeight(1)
     self.elements.getPositionButton.normal = {fg = 0x9090FF, bg = 0x0000F0}
     self.elements.getPositionButton.active = {fg = 0x000000, bg = 0x9090FF}
     self.elements.getPositionButton:setContent({
-        "",
         "GET POSITION"
     })
 
-    self.elements.getMissilesButton:setPosition(2, 4)
+    self.elements.getMissilesButton:setPosition(2, 3)
     self.elements.getMissilesButton:setWidth(17)
-    self.elements.getMissilesButton:setHeight(3)
+    self.elements.getMissilesButton:setHeight(1)
     self.elements.getMissilesButton.normal = {fg = 0x9090FF, bg = 0x0000F0}
     self.elements.getMissilesButton.active = {fg = 0x000000, bg = 0x9090FF}
     self.elements.getMissilesButton:setContent({
-        "",
         "GET MISSILES"
+    })
+
+    self.elements.scanStorageButton:setPosition(2, 5)
+    self.elements.scanStorageButton:setWidth(17)
+    self.elements.scanStorageButton:setHeight(1)
+    self.elements.scanStorageButton.normal = {fg = 0x9090FF, bg = 0x0000F0}
+    self.elements.scanStorageButton.active = {fg = 0x000000, bg = 0x9090FF}
+    self.elements.scanStorageButton:setContent({
+        "SCAN STORAGE"
     })
 
     self.elements.launchButton:setPosition(2, 7)
@@ -283,7 +344,7 @@ function LauncherProgram:initStateOperational()
     end)
 
     self.elements.getMissilesButton.action = (function(self, displayMatrix)
-        local success, response = program.functions.getMissiles(3)
+        local success, response = program.functions.getMissiles(program.functions.getSiloID())
         if success then
             program.session.listContetnt = {}
             program.session.missileTable = {}
@@ -307,9 +368,37 @@ function LauncherProgram:initStateOperational()
         self:drawNormal(displayMatrix.gpu)
     end)
 
+    self.elements.scanStorageButton.action = function (self, displayMatrix)
+        local success, response = program.functions.getScanStorageTime(program.functions.getSiloID())
+        if success then
+            program.elements.errorFrame:setContent({
+                "Scan will take "..tostring(response).." seconds"
+            })
+            program.elements.errorFrame:drawNormal(displayMatrix.gpu)
+            success, response = program.functions.scanStorage(program.functions.getSiloID(), response + 5)
+            if success then
+                program.elements.errorFrame:setContent({
+                    "Scan complete"
+                })
+            else
+                program.elements.errorFrame:setContent({
+                    response or "ERROR"
+                })
+            end
+        else
+            program.elements.errorFrame:setContent({
+                response or "ERROR"
+            })
+        end
+        program.elements.errorFrame:drawNormal(displayMatrix.gpu)
+        self:drawNormal(displayMatrix.gpu)
+        
+    end
+
     self.elements.launchButton.action = (function(self, displayMatrix)
         if program.functions.checkIfAllSet() then
-            local success, errorMessage = program.functions.requestLaunch(3, program.session.target.x, program.session.target.z, program.session.missileTable[program.session.selectedMissileIndex])
+            -- local success, errorMessage = program.functions.requestSalvo(program.functions.getSiloID(), program.session.target.x, program.session.target.z, program.session.missileTable[program.session.selectedMissileIndex], "random", 50, 85)
+            local success, errorMessage = program.functions.requestLaunch(program.functions.getSiloID(), program.session.target.x, program.session.target.z, program.session.missileTable[program.session.selectedMissileIndex])
             if not success then
                 program.elements.launchButton.normal = {fg = 0x000000, bg = 0xFF00000}
                 self:drawNormal(displayMatrix.gpu)
