@@ -60,7 +60,11 @@ function SiloArrayServer:getMissileTable(message)
 end
 
 function SiloArrayServer:getSalvoTypes(message)
-    self.connection:send(message.originID, "MA-getResponse", serialization.serialize(self.salvoFunctions))
+    local salvoTypes = {}
+    for k, _ in pairs(self.salvoFunctions) do
+        table.insert(salvoTypes, k)
+    end
+    self.connection:send(message.originID, "MA-getResponse", serialization.serialize(salvoTypes))
 end
 
 function SiloArrayServer:launchMissile(message)
