@@ -103,10 +103,17 @@ end
 function LauncherProgram:initStateSession()
     self.session = {}
 
-    self.session.listContetnt = {}
+    self.session.missileListContetnt = {}
     self.session.missileTable = {}
-    self.session.target = {}
     self.session.selectedMissileIndex = nil
+
+    self.session.salvoListContent = {}
+    self.session.salvoTable = {}
+    self.session.selectedSalvoIndex = nil
+
+    self.session.salvoCount = 10
+    self.session.salvoSeparation = 85
+    self.session.target = {}
 end
 
 
@@ -122,6 +129,7 @@ function LauncherProgram:initStateInterface()
     self.groups.target = ElementGroup.new()
     self.groups.buttons = ElementGroup.new()
     self.groups.missile = ElementGroup.new()
+    self.groups.salvos = ElementGroup.new()
     self.groups.other = ElementGroup.new()
 
     self.elements.title = DisplayElement.new()
@@ -143,23 +151,43 @@ function LauncherProgram:initStateInterface()
     self.elements.missileTableTitle = DisplayElement.new()
     self.groups.missile:addElement(self.elements.missileTableTitle)
 
+    self.elements.salvoTableTitle = DisplayElement.new()
+    self.elements.salvoCountDescription = DisplayElement.new()
+    self.elements.salvoCount = DisplayElement.new()
+    self.elements.salvoSeparationDescription = DisplayElement.new()
+    self.elements.salvoSeparation = DisplayElement.new()
+    self.groups.salvos:addElement(self.elements.salvoTableTitle)
+    self.groups.salvos:addElement(self.elements.salvoCountDescription)
+    self.groups.salvos:addElement(self.elements.salvoCount)
+    self.groups.salvos:addElement(self.elements.salvoSeparationDescription)
+    self.groups.salvos:addElement(self.elements.salvoSeparation)
+
     self.elements.getPositionButton = DisplayElement.new()
     self.elements.getMissilesButton = DisplayElement.new()
     self.elements.scanStorageButton = DisplayElement.new()
+    self.elements.getSalvoTypesButton = DisplayElement.new()
     self.elements.launchButton = DisplayElement.new()
     self.elements.exitButton = DisplayElement.new()
     self.groups.buttons:addElement(self.elements.getPositionButton)
     self.groups.buttons:addElement(self.elements.getMissilesButton)
     self.groups.buttons:addElement(self.elements.scanStorageButton)
+    self.groups.buttons:addElement(self.elements.getSalvoTypesButton)
     self.groups.buttons:addElement(self.elements.launchButton)
     self.groups.buttons:addElement(self.elements.exitButton)
 
     local listBuilder = DisplayMatrixTemplates.new("list")
-    listBuilder.numberOfVisibleElements = 12
+    listBuilder.numberOfVisibleElements = 8
     listBuilder.elementWidth = 39
     listBuilder:setType("single_select")
     self.elements.missileList = listBuilder:build()
     self.groups.missile:addElement(self.elements.missileList.group)
+
+    listBuilder = DisplayMatrixTemplates.new("list")
+    listBuilder.numberOfVisibleElements = 5
+    listBuilder.elementWidth = 39
+    listBuilder:setType("single_select")
+    self.elements.salvoList = listBuilder:build()
+    self.groups.salvos:addElement(self.elements.salvoList.group)
 end
 
 
@@ -167,6 +195,7 @@ function LauncherProgram:initStateInitialized()
     self.groups.target:setPosition(2, 3)
     self.groups.buttons:setPosition(1, 8)
     self.groups.missile:setPosition(21, 3)
+    self.groups.salvos:setPosition(21, 14)
     self.groups.other:setPosition(1, 1)
 
     self.elements.title:setPosition(2, 1)
@@ -177,7 +206,7 @@ function LauncherProgram:initStateInitialized()
         "ROCKET SILO REMOTE CONTROLL"
     })
 
-    self.elements.errorFrame:setPosition(2, 18)
+    self.elements.errorFrame:setPosition(2, 24)
     self.elements.errorFrame:setWidth(60)
     self.elements.errorFrame:setHeight(1)
     self.elements.errorFrame.drawFrame = true
@@ -231,6 +260,50 @@ function LauncherProgram:initStateInitialized()
         "Missiles:"
     })
 
+    self.elements.salvoTableTitle:setPosition(1, 1)
+    self.elements.salvoTableTitle:setWidth(41)
+    self.elements.salvoTableTitle:setHeight(1)
+    self.elements.salvoTableTitle.drawFrame = true
+    self.elements.salvoTableTitle.normal = {fg = 0xFFFFFF, bg = 0x000000}
+    self.elements.salvoTableTitle.active = {fg = 0x000000, bg = 0xFF0000}
+    self.elements.salvoTableTitle:setContent({
+        "Salvo:"
+    })
+
+    self.elements.salvoCountDescription:setPosition(1, 3)
+    self.elements.salvoCountDescription:setWidth(14)
+    self.elements.salvoCountDescription:setHeight(1)
+    self.elements.salvoCountDescription.drawFrame = true
+    self.elements.salvoCountDescription.centeredWidth = false
+    self.elements.salvoCountDescription:setContent({
+        "Count:"
+    })
+
+    self.elements.salvoCount:setPosition(9, 3)
+    self.elements.salvoCount:setWidth(5)
+    self.elements.salvoCount:setHeight(1)
+    self.elements.salvoCount.centeredWidth = false
+    self.elements.salvoCount:setContent({
+        tostring(self.session.salvoCount)
+    })
+
+    self.elements.salvoSeparationDescription:setPosition(16, 3)
+    self.elements.salvoSeparationDescription:setWidth(26)
+    self.elements.salvoSeparationDescription:setHeight(1)
+    self.elements.salvoSeparationDescription.drawFrame = true
+    self.elements.salvoSeparationDescription.centeredWidth = false
+    self.elements.salvoSeparationDescription:setContent({
+        "Separation/Radius:"
+    })
+
+    self.elements.salvoSeparation:setPosition(36, 3)
+    self.elements.salvoSeparation:setWidth(5)
+    self.elements.salvoSeparation:setHeight(1)
+    self.elements.salvoSeparation.centeredWidth = false
+    self.elements.salvoSeparation:setContent({
+        tostring(self.session.salvoSeparation)
+    })
+
     self.elements.getPositionButton:setPosition(2, 1)
     self.elements.getPositionButton:setWidth(17)
     self.elements.getPositionButton:setHeight(1)
@@ -258,7 +331,16 @@ function LauncherProgram:initStateInitialized()
         "SCAN STORAGE"
     })
 
-    self.elements.launchButton:setPosition(2, 7)
+    self.elements.getSalvoTypesButton:setPosition(2, 7)
+    self.elements.getSalvoTypesButton:setWidth(17)
+    self.elements.getSalvoTypesButton:setHeight(1)
+    self.elements.getSalvoTypesButton.normal = {fg = 0x9090FF, bg = 0x0000F0}
+    self.elements.getSalvoTypesButton.active = {fg = 0x000000, bg = 0x9090FF}
+    self.elements.getSalvoTypesButton:setContent({
+        "GET SALVO TYPES"
+    })
+
+    self.elements.launchButton:setPosition(2, 9)
     self.elements.launchButton:setWidth(9)
     self.elements.launchButton:setHeight(3)
     self.elements.launchButton.normal = {fg = 0x00FF00, bg = 0x007000}
@@ -268,7 +350,7 @@ function LauncherProgram:initStateInitialized()
         "LAUNCH"
     })
 
-    self.elements.exitButton:setPosition(11, 7)
+    self.elements.exitButton:setPosition(11, 9)
     self.elements.exitButton:setWidth(8)
     self.elements.exitButton:setHeight(3)
     self.elements.exitButton.normal = {fg = 0xFF0000, bg = 0x700000}
@@ -279,7 +361,10 @@ function LauncherProgram:initStateInitialized()
     })
 
     self.elements.missileList.group:setPosition(1, 3)
-    self.elements.missileList:setContent(self.session.listContetnt)
+    self.elements.missileList:setContent(self.session.missileListContetnt)
+
+    self.elements.salvoList.group:setPosition(1, 5)
+    self.elements.salvoList:setContent(self.session.salvoListContent)
 end
 
 
@@ -297,9 +382,17 @@ function LauncherProgram:initStateOperational()
             self.elements.launchButton.active = {fg = 0x000000, bg = 0x00FF00}
         else
             self.elements.launchButton.normal = {fg = 0x707070, bg = 0x303030}
-            self.elements.launchButton.active = {fg = 0x000000, bg = 0xFF00000}
+            self.elements.launchButton.active = {fg = 0x000000, bg = 0xFF0000}
         end
         self.elements.launchButton:drawNormal(self.resources.gpu)
+    end)
+
+    self.functions.drawSalvoTitle = (function()
+        if self.session.selectedSalvoIndex ~= nil then
+            self.elements.salvoTableTitle:drawActive(self.resources.gpu)
+        else
+            self.elements.salvoTableTitle:drawNormal(self.resources.gpu)
+        end
     end)
 
 
@@ -346,19 +439,43 @@ function LauncherProgram:initStateOperational()
     self.elements.getMissilesButton.action = (function(self, displayMatrix)
         local success, response = program.functions.getMissiles(program.functions.getSiloID())
         if success then
-            program.session.listContetnt = {}
+            program.session.missileListContetnt = {}
             program.session.missileTable = {}
             for missileName, count in pairs(response) do
-                table.insert(program.session.listContetnt, {tostring(missileName).." x "..tostring(count)})
+                table.insert(program.session.missileListContetnt, {tostring(missileName).." x "..tostring(count)})
                 table.insert(program.session.missileTable, missileName)
             end
 
-            program.elements.missileList:setContent(program.session.listContetnt)
+            program.elements.missileList:setContent(program.session.missileListContetnt)
             program.elements.missileList.activeElement = nil
             program.session.selectedMissileIndex = nil
             program.elements.missileList.topElementIndex = 1
             program.elements.missileList.group:drawNormal(displayMatrix.gpu, true)
             program.functions.colorLaunchButton()
+        else
+            program.elements.errorFrame:setContent({
+                response[1] or response or "ERROR"
+            })
+            program.elements.errorFrame:drawNormal(displayMatrix.gpu)
+        end
+        self:drawNormal(displayMatrix.gpu)
+    end)
+
+    self.elements.getSalvoTypesButton.action = (function(self, displayMatrix)
+        local success, response = program.functions.getSalvoTypes(program.functions.getSiloID())
+        if success then
+            program.session.salvoListContent = {}
+            program.session.salvoTable = {}
+            for _, salvoName in pairs(response) do
+                table.insert(program.session.salvoListContent, {tostring(salvoName)})
+                table.insert(program.session.salvoTable, salvoName)
+            end
+
+            program.elements.salvoList:setContent(program.session.salvoListContent)
+            program.elements.salvoList.activeElement = nil
+            program.session.selectedSalvoIndex = nil
+            program.elements.salvoList.topElementIndex = 1
+            program.elements.salvoList.group:drawNormal(displayMatrix.gpu, true)
         else
             program.elements.errorFrame:setContent({
                 response[1] or response or "ERROR"
@@ -397,17 +514,31 @@ function LauncherProgram:initStateOperational()
 
     self.elements.launchButton.action = (function(self, displayMatrix)
         if program.functions.checkIfAllSet() then
-            -- local success, errorMessage = program.functions.requestSalvo(program.functions.getSiloID(), program.session.target.x, program.session.target.z, program.session.missileTable[program.session.selectedMissileIndex], "random", 50, 85)
-            local success, errorMessage = program.functions.requestLaunch(program.functions.getSiloID(), program.session.target.x, program.session.target.z, program.session.missileTable[program.session.selectedMissileIndex])
-            if not success then
-                program.elements.launchButton.normal = {fg = 0x000000, bg = 0xFF00000}
-                self:drawNormal(displayMatrix.gpu)
-                program.elements.errorFrame:setContent({
-                    errorMessage or "ERROR"
-                })
-                program.elements.errorFrame:drawNormal(displayMatrix.gpu)
-                os.sleep(1)
-                program.elements.launchButton.normal = {fg = 0x00FF00, bg = 0x007000}
+            if program.session.selectedSalvoIndex ~= nil then
+                local success, errorMessage = program.functions.requestSalvo(program.functions.getSiloID(), program.session.target.x, program.session.target.z, program.session.missileTable[program.session.selectedMissileIndex], program.session.salvoTable[program.session.selectedSalvoIndex], program.session.salvoCount, program.session.salvoSeparation)
+                if not success then
+                    program.elements.launchButton.normal = {fg = 0x000000, bg = 0xFF00000}
+                    self:drawNormal(displayMatrix.gpu)
+                    program.elements.errorFrame:setContent({
+                        errorMessage[1] or "ERROR"
+                    })
+                    program.elements.errorFrame:drawNormal(displayMatrix.gpu)
+                    os.sleep(1)
+                    program.elements.launchButton.normal = {fg = 0x00FF00, bg = 0x007000}
+                end
+            else
+                -- local success, errorMessage = program.functions.requestSalvo(program.functions.getSiloID(), program.session.target.x, program.session.target.z, program.session.missileTable[program.session.selectedMissileIndex], "random", 10, 85)
+                local success, errorMessage = program.functions.requestLaunch(program.functions.getSiloID(), program.session.target.x, program.session.target.z, program.session.missileTable[program.session.selectedMissileIndex])
+                if not success then
+                    program.elements.launchButton.normal = {fg = 0x000000, bg = 0xFF00000}
+                    self:drawNormal(displayMatrix.gpu)
+                    program.elements.errorFrame:setContent({
+                        errorMessage or "ERROR"
+                    })
+                    program.elements.errorFrame:drawNormal(displayMatrix.gpu)
+                    os.sleep(1)
+                    program.elements.launchButton.normal = {fg = 0x00FF00, bg = 0x007000}
+                end
             end
         end
         self:drawNormal(displayMatrix.gpu)
@@ -426,6 +557,15 @@ function LauncherProgram:initStateOperational()
         program.functions.colorLaunchButton()
     end)
 
+    self.elements.salvoList.onListInteractionFunction = (function (list, elementIndex, element, displayMatrix)
+        if list.activeElement == nil then
+            program.session.selectedSalvoIndex = nil
+        else
+            program.session.selectedSalvoIndex = list.activeElement
+        end
+        program.functions.drawSalvoTitle()
+    end)
+
 
     self.displayMatrix = DisplayMatrix.new(self.resources.gpu)
     for _, group in pairs(self.groups) do
@@ -435,7 +575,7 @@ end
 
 
 function LauncherProgram:initStateRunning()
-    self.displayMatrix:setDims(62, 19)
+    self.displayMatrix:setDims(62, 25)
     self.displayMatrix:draw()
     self.functions.colorLaunchButton()
     self.displayMatrix:main()
@@ -443,6 +583,7 @@ end
 
 function LauncherProgram:revertStateRunning()
     self.session.selectedMissileIndex = nil
+    self.session.selectedSalvoIndex = nil
 end
 
 

@@ -116,7 +116,7 @@ function BunkerManagementProgram:initStateInitialized()
         "BUNKER MANAGEMENT"
     })
 
-    self.elements.errorFrame:setPosition(1, 25)
+    self.elements.errorFrame:setPosition(1, 24)
     self.elements.errorFrame:setWidth(61)
     self.elements.errorFrame:setHeight(1)
     self.elements.errorFrame.drawFrame = true
