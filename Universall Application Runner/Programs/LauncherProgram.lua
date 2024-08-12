@@ -118,7 +118,10 @@ function LauncherProgram:initStateSession()
 
     self.session.salvoCount = 10
     self.session.salvoSeparation = 85
+
     self.session.target = {}
+    self.session.oryginalTarget = {}
+    self.session.maxOryginalTargetDistance = 100
 end
 
 
@@ -266,7 +269,7 @@ function LauncherProgram:initStateInitialized()
     self.elements.salvoTableTitle:setHeight(1)
     self.elements.salvoTableTitle.drawFrame = true
     self.elements.salvoTableTitle.normal = {fg = 0xFFFFFF, bg = 0x000000}
-    self.elements.salvoTableTitle.active = {fg = 0x000000, bg = 0xFF0000}
+    self.elements.salvoTableTitle.active = {fg = 0x000000, bg = 0xFFFFFF}
     self.elements.salvoTableTitle:setContent({
         "Salvo:"
     })
@@ -415,6 +418,7 @@ function LauncherProgram:initStateOperational()
                 tostring(response.x)
             })
             program.session.target = {x = response.x, z = response.z}
+            program.session.oryginalTarget = {x = response.x, z = response.z}
         else
             program.elements.positionZ:setContent({
                 "---"
@@ -525,7 +529,6 @@ function LauncherProgram:initStateOperational()
                     program.elements.launchButton.normal = {fg = 0x00FF00, bg = 0x007000}
                 end
             else
-                -- local success, errorMessage = program.functions.requestSalvo(program.functions.getSiloID(), program.session.target.x, program.session.target.z, program.session.missileTable[program.session.selectedMissileIndex], "random", 10, 85)
                 local success, errorMessage = program.functions.requestLaunch(program.functions.getSiloID(), program.session.target.x, program.session.target.z, program.session.missileTable[program.session.selectedMissileIndex])
                 if not success then
                     program.elements.launchButton.normal = {fg = 0x000000, bg = 0xFF00000}
@@ -564,6 +567,49 @@ function LauncherProgram:initStateOperational()
         program.functions.drawSalvoTitle()
     end)
 
+    self.elements.salvoCount.scroll = (function (self, displayMatrix, direction)
+        if program.session.salvoCount > 1 or direction > 0 then
+            program.session.salvoCount = program.session.salvoCount + direction
+            self:setContent({
+                tostring(program.session.salvoCount)
+            })
+            self:drawNormal(displayMatrix.gpu)
+        end
+    end)
+
+    self.elements.salvoSeparation.scroll = (function (self, displayMatrix, direction)
+        if program.session.salvoSeparation > 5 or direction > 0 then
+            program.session.salvoSeparation = program.session.salvoSeparation + 5*direction
+            self:setContent({
+                tostring(program.session.salvoSeparation)
+            })
+            self:drawNormal(displayMatrix.gpu)
+        end
+    end)
+
+    self.elements.positionX.scroll = (function (self, displayMatrix, direction)
+        if program.session.target.x ~= nil and
+        ((direction > 0 and program.session.target.x - program.session.oryginalTarget.x < program.session.maxOryginalTargetDistance) or
+        (direction < 0 and program.session.oryginalTarget.x - program.session.target.x < program.session.maxOryginalTargetDistance)) then
+            program.session.target.x = program.session.target.x + direction*10
+            self:setContent({
+                tostring(program.session.target.x)
+            })
+            self:drawNormal(displayMatrix.gpu)
+        end
+    end)
+
+    self.elements.positionZ.scroll = (function (self, displayMatrix, direction)
+        if program.session.target.z ~= nil and
+        ((direction > 0 and program.session.target.z - program.session.oryginalTarget.z < program.session.maxOryginalTargetDistance) or
+        (direction < 0 and program.session.oryginalTarget.z - program.session.target.z < program.session.maxOryginalTargetDistance)) then
+            program.session.target.z = program.session.target.z + direction*10
+            self:setContent({
+                tostring(program.session.target.z)
+            })
+            self:drawNormal(displayMatrix.gpu)
+        end
+    end)
 
     self.displayMatrix = DisplayMatrix.new(self.resources.gpu)
     for _, group in pairs(self.groups) do
