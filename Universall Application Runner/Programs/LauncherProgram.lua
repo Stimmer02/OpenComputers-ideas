@@ -1,6 +1,13 @@
 ---@diagnostic disable: duplicate-set-field
 local ProgramPackage = require("ProgramPackage")
 
+local DisplayElement = require("DisplayElement")
+local ElementGroup = require("ElementGroup")
+local DisplayMatrixTemplates = require("DisplayMatrixTemplates")
+local serialization = require("serialization")
+local DisplayMatrix = require("DisplayMatrix")
+local os = require("os")
+
 local LauncherProgram = ProgramPackage.new()
 LauncherProgram.__index = LauncherProgram
 
@@ -20,8 +27,6 @@ end
 
 
 function LauncherProgram:initStateFunctional()
-    local serialization = require("serialization")
-
     self.functions.getSiloID = (function ()
         return 1
     end)
@@ -118,10 +123,6 @@ end
 
 
 function LauncherProgram:initStateInterface()
-    local DisplayElement = require("DisplayElement")
-    local ElementGroup = require("ElementGroup")
-    local DisplayMatrixTemplates = require("DisplayMatrixTemplates")
-
     self.elements = {}
     self.groups = {}
     self.displayMatrix = nil
@@ -369,9 +370,6 @@ end
 
 
 function LauncherProgram:initStateOperational()
-    local DisplayMatrix = require("DisplayMatrix")
-    local os = require("os")
-
     self.functions.checkIfAllSet = (function()
         return self.session.target.x ~= nil and self.session.selectedMissileIndex ~= nil
     end)

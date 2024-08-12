@@ -1,6 +1,14 @@
 ---@diagnostic disable: duplicate-set-field
 local ProgramPackage = require("ProgramPackage")
 
+local serialization = require("serialization")
+local DisplayElement = require("DisplayElement")
+local ElementGroup = require("ElementGroup")
+local DisplayMatrix = require("DisplayMatrix")
+local os = require("os")
+local thread = require("thread")
+
+
 local CompassPackage = ProgramPackage.new()
 CompassPackage.__index = CompassPackage
 
@@ -19,7 +27,6 @@ end
 
 
 function CompassPackage:initStateFunctional()
-    local serialization = require("serialization")
 
     self.functions.getPosition = function()
         self.resources.connection:send(2, self.resources.userName)
@@ -55,8 +62,7 @@ function CompassPackage:initStateSession()
 end
 
 function CompassPackage:initStateInterface()
-    local DisplayElement = require("DisplayElement")
-    local ElementGroup = require("ElementGroup")
+    
 
     self.groups = {}
     self.elements = {}
@@ -196,8 +202,7 @@ function CompassPackage:initStateInitialized()
 end
 
 function CompassPackage:initStateOperational()
-    local DisplayMatrix = require("DisplayMatrix")
-    local os = require("os")
+    
 
     self.functions.updateDirectionThread = function()
         while self.session.threadRunning do
@@ -262,7 +267,6 @@ function CompassPackage:initStateOperational()
 end
 
 function CompassPackage:initStateRunning()
-    local thread = require("thread")
 
     self.displayMatrix:setDims(41, 11)
     self.displayMatrix:draw()
