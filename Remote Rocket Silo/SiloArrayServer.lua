@@ -157,7 +157,7 @@ end
 function SiloArrayServer:run()
     self.running = true
     while self.running do
-        self.running = self.connection:handleMessage(nil, self.operationMap, self)
+        self.running = self.connection:handleMessageMultiThreaded(nil, self.operationMap, self)
     end
 end
 

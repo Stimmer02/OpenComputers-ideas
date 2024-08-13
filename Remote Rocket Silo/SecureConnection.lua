@@ -67,18 +67,25 @@ function SecureConnection:handleMessage(timeout, headerToActionMap, ...)
     return true
 end
 
-function SecureConnection:handleMessageMultiThreaded(timeout, headerToActionMap, ...)
+function SecureConnection:handleMessageAsync(timeout, headerToActionMap, ...)
     local fullEvent = {event.pullFiltered(timeout, function(eventType, _, _, _, _, remoteID, header)
         return (eventType == "modem_message" and self.database:isPresent(remoteID) and headerToActionMap[header] ~= nil) or eventType == "interrupted"
     end)}
     if fullEvent[1] == "interrupted" or fullEvent[1] == nil then
         return false
     end
-    thread.create(
-        function(...)
-            headerToActionMap[fullEvent[7]](..., createPacket(fullEvent))
+
+    thread.create(function(...)
+        local id = string.sub(tostring(thread.current()), 8);
+        print("thread started - " .. id)
+
+        local status, err = pcall(headerToActionMap[fullEvent[7]], ..., createPacket(fullEvent))
+        if not status then
+            print("thread error:  - " .. id .. " " .. err)
+        else
+            print("thread ended   - " .. id)
         end
-    )
+    end, ...)
     return true
 end
 
