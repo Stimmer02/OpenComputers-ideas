@@ -122,6 +122,7 @@ function LauncherProgram:initStateSession()
     self.session.target = {}
     self.session.oryginalTarget = {}
     self.session.maxOryginalTargetDistance = 100
+    self.session.targetShift = 100;
 end
 
 
@@ -132,6 +133,7 @@ function LauncherProgram:initStateInterface()
 
     self.groups.target = ElementGroup.new()
     self.groups.buttons = ElementGroup.new()
+    self.groups.getPosition = ElementGroup.new()
     self.groups.missile = ElementGroup.new()
     self.groups.salvos = ElementGroup.new()
     self.groups.other = ElementGroup.new()
@@ -167,12 +169,19 @@ function LauncherProgram:initStateInterface()
     self.groups.salvos:addElement(self.elements.salvoSeparation)
 
     self.elements.getPositionButton = DisplayElement.new()
+    self.elements.directionDescription = DisplayElement.new()
+    self.elements.directionValue = DisplayElement.new()
+    self.elements.directionDistanceValue = DisplayElement.new()
+    self.groups.getPosition:addElement(self.elements.getPositionButton)
+    self.groups.getPosition:addElement(self.elements.directionDescription)
+    self.groups.getPosition:addElement(self.elements.directionValue)
+    self.groups.getPosition:addElement(self.elements.directionDistanceValue)
+
     self.elements.getMissilesButton = DisplayElement.new()
     self.elements.scanStorageButton = DisplayElement.new()
     self.elements.getSalvoTypesButton = DisplayElement.new()
     self.elements.launchButton = DisplayElement.new()
     self.elements.exitButton = DisplayElement.new()
-    self.groups.buttons:addElement(self.elements.getPositionButton)
     self.groups.buttons:addElement(self.elements.getMissilesButton)
     self.groups.buttons:addElement(self.elements.scanStorageButton)
     self.groups.buttons:addElement(self.elements.getSalvoTypesButton)
@@ -197,7 +206,8 @@ end
 
 function LauncherProgram:initStateInitialized()
     self.groups.target:setPosition(2, 3)
-    self.groups.buttons:setPosition(1, 8)
+    self.groups.getPosition:setPosition(1, 8)
+    self.groups.buttons:setPosition(1, 12)
     self.groups.missile:setPosition(21, 3)
     self.groups.salvos:setPosition(21, 14)
     self.groups.other:setPosition(1, 1)
@@ -309,12 +319,37 @@ function LauncherProgram:initStateInitialized()
     })
 
     self.elements.getPositionButton:setPosition(2, 1)
-    self.elements.getPositionButton:setWidth(17)
+    self.elements.getPositionButton:setWidth(18)
     self.elements.getPositionButton:setHeight(1)
+    self.elements.getPositionButton.drawFrame = true
     self.elements.getPositionButton.normal = {fg = 0x9090FF, bg = 0x0000F0}
     self.elements.getPositionButton.active = {fg = 0x000000, bg = 0x9090FF}
     self.elements.getPositionButton:setContent({
         "GET POSITION"
+    })
+
+    self.elements.directionDescription:setPosition(2, 3)
+    self.elements.directionDescription:setWidth(18)
+    self.elements.directionDescription:setHeight(2)
+    self.elements.directionDescription.centeredWidth = false
+    self.elements.directionDescription.drawFrame = true
+    self.elements.directionDescription:setContent({
+        "Towards",
+        "Distance"
+    })
+
+    self.elements.directionValue:setPosition(12, 3)
+    self.elements.directionValue:setWidth(7)
+    self.elements.directionValue:setHeight(1)
+    self.elements.directionValue:setContent({
+        "-------"
+    })
+
+    self.elements.directionDistanceValue:setPosition(12, 4)
+    self.elements.directionDistanceValue:setWidth(7)
+    self.elements.directionDistanceValue:setHeight(1)
+    self.elements.directionDistanceValue:setContent({
+        tostring(self.session.targetShift)
     })
 
     self.elements.getMissilesButton:setPosition(2, 3)
@@ -409,8 +444,11 @@ function LauncherProgram:initStateOperational()
         program.elements.positionX:drawNormal(displayMatrix.gpu)
 
         local success, response = program.dep.CompassProgram.getPosition()
+        local _, direction = program.dep.CompassProgram.getDirection()
+        local _, directionString = program.dep.CompassProgram.directionToString(direction)
 
         if success then
+            response.x, response.z = program.dep.CompassProgram.shiftTowardsDirection(response.x, response.z, direction, program.session.targetShift)
             program.elements.positionZ:setContent({
                 tostring(response.z)
             })
@@ -419,6 +457,11 @@ function LauncherProgram:initStateOperational()
             })
             program.session.target = {x = response.x, z = response.z}
             program.session.oryginalTarget = {x = response.x, z = response.z}
+            
+            program.elements.directionValue:setContent({
+                directionString
+            })
+            program.elements.directionValue:drawNormal(displayMatrix.gpu)
         else
             program.elements.positionZ:setContent({
                 "---"
@@ -606,6 +649,17 @@ function LauncherProgram:initStateOperational()
             program.session.target.z = program.session.target.z + direction*10
             self:setContent({
                 tostring(program.session.target.z)
+            })
+            self:drawNormal(displayMatrix.gpu)
+        end
+    end)
+
+    self.elements.directionDistanceValue.scroll = (function (self, displayMatrix, direction)
+        local newShift = program.session.targetShift + direction*50
+        if newShift >= 0 and newShift <= 500 then
+            program.session.targetShift = newShift
+            self:setContent({
+                tostring(program.session.targetShift)
             })
             self:drawNormal(displayMatrix.gpu)
         end
