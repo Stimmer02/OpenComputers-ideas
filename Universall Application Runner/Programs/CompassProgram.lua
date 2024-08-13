@@ -55,6 +55,31 @@ function CompassPackage:initStateFunctional()
         local out = directionMap[direction]
         return out ~= nil, out or "Invalid direction"
     end
+
+    self.functions.shiftTowardsDirection = function(X, Z, direction, shift)
+        if type(direction) == "string" then
+            if direction == "north" then
+                Z = Z - shift
+            elseif direction == "south" then
+                Z = Z + shift
+            elseif direction == "west" then
+                X = X - shift
+            elseif direction == "east" then
+                X = X + shift
+            end
+        else
+            if direction == 2 then
+                Z = Z - shift
+            elseif direction == 3 then
+                Z = Z + shift
+            elseif direction == 4 then
+                X = X - shift
+            elseif direction == 5 then
+                X = X + shift
+            end
+        end
+        return X, Z
+    end
 end
 
 function CompassPackage:initStateSession()
